@@ -1,5 +1,5 @@
 # fbui
-fbui是基于jquery开发的入门级组件插件 ,你需要引用一个fbui.js,fbui.css,jquery.js。
+fbui是基于jquery开发的入门级组件插件 ,你需要引用一个`fbui.js`,`fbui.css`,`jquery.js`。
 ### 手动开始
 
 引用一个`fbui.js`,`fbui.css`,`jquery.js`
