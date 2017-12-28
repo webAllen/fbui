@@ -1,4 +1,49 @@
 ;(function(window, $) {
+	var regexs = {
+	    // 匹配 max_length(12) => ["max_length",12]
+	    rule:/^(.+?)\((.+)\)$/,
+	    // 数字
+	    numericRegex:/^[0-9]+$/,
+	    /**
+	    * @descrition:邮箱规则
+	    * 1.邮箱以a-z、A-Z、0-9开头，最小长度为1.
+	    * 2.如果左侧部分包含-、_、.则这些特殊符号的前面必须包一位数字或字母。
+	    * 3.@符号是必填项
+	    * 4.右则部分可分为两部分，第一部分为邮件提供商域名地址，第二部分为域名后缀，现已知的最短为2位。最长的为6为。
+	    * 5.邮件提供商域可以包含特殊字符-、_、.
+	    */
+	    email:/^[a-z0-9]+([._\\-]*[a-z0-9])*@([a-z0-9]+[-a-z0-9]*[a-z0-9]+.){1,63}[a-z0-9]+$/,
+	    /**
+	     * [ip ipv4、ipv6]
+	     * "192.168.0.0"
+	     * "192.168.2.3.1.1"
+	     * "235.168.2.1"
+	     * "192.168.254.10"
+	     * "192.168.254.10.1.1"
+	     */
+	    ip:/^(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])((\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])){3}|(\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])){5})$/,
+	    /**
+	    * @descrition:判断输入的参数是否是个合格的固定电话号码。
+	    * 待验证的固定电话号码。
+	    * 国家代码(2到3位)-区号(2到3位)-电话号码(7到8位)-分机号(3位)
+	    **/
+	    fax:/^(([0\+]\d{2,3}-)?(0\d{2,3})-)(\d{7,8})(-(\d{3,}))?$/,
+	    /**
+	    *@descrition:手机号码段规则
+	    * 13段：130、131、132、133、134、135、136、137、138、139
+	    * 14段：145、147
+	    * 15段：150、151、152、153、155、156、157、158、159
+	    * 17段：170、176、177、178
+	    * 18段：180、181、182、183、184、185、186、187、188、189
+	    * 国际码 如：中国(+86)
+	    */
+	    phone:/^((\+?[0-9]{1,4})|(\(\+86\)))?(13[0-9]|14[57]|15[012356789]|17[03678]|18[0-9])\d{8}$/,
+	    /**
+	     * @descrition 匹配 URL
+	     */
+	    url:/[a-zA-z]+:\/\/[^\s]/
+	};
+
 	var element = [];
 	var fbOptions = [];
 	var heightArray = []; //瀑布流高度储存---------
@@ -98,15 +143,50 @@
 			$el.append(html).css("height",maxInNumbers)
 		})
 	};
+	//重置瀑布流
+	 fbUi.resetWaterfall = function(options){
+	 	var defaults = {
+			el:"body",
+        };
+		var fb = $.extend(defaults, options || {});
+		var $el = $(fb.el);
+		heightArray = [];
+		$el.html("").css("height",0);
+	};
 	//​显示模态弹窗 showModal
 	fbUi.showModal = function(options,succFn){
 		var defaults = {
             title : '提示',//提示的标题
-            content : '',//提示的内容
+            content:'',//提示的内容
+            textBox:'', //input：为input；textarea：为textarea
+            placeholder:''//文本框提示
         };
 		var fb = $.extend(defaults, options || {});
 		$(".fb-showModal").remove();
-		var html = '<div style="display:none;" class="fb-showModal fb-position-fixed fb-z999 fb-showModal-black" >\
+		if(fb.textBox == 'input'){
+			var html = '<div style="display:none;" class="fb-showModal fb-position-fixed fb-z999 fb-showModal-black" >\
+				        <div class="fb-showModal-group fb-position-relative fb-transition startTop" >\
+				            <div class="fb-showModal-title fb-font18">'+fb.title+'</div>\
+				            <div class="fb-showModal-content fb-font14"><input class="fb-textBox" type="text" placeholder="'+fb.placeholder+'" /></div>\
+				            <div class="fb-showModal-buttom ">\
+				                <button class="fb-showModal-close fb-inlineBlock fb-font16">取消</button>\
+				                <button class="fb-showModal-true fb-buttonFill-info fb-inlineBlock fb-font16" >确定</button>\
+				            </div>\
+				        </div>\
+				    </div>';
+		}else if(fb.textBox == 'textarea'){
+			var html = '<div style="display:none;" class="fb-showModal fb-position-fixed fb-z999 fb-showModal-black" >\
+				        <div class="fb-showModal-group fb-position-relative fb-transition startTop" >\
+				            <div class="fb-showModal-title fb-font18">'+fb.title+'</div>\
+				            <div class="fb-showModal-content fb-font14"><textarea class="fb-textBox"  placeholder="'+fb.placeholder+'" ></textarea></div>\
+				            <div class="fb-showModal-buttom ">\
+				                <button class="fb-showModal-close fb-inlineBlock fb-font16">取消</button>\
+				                <button class="fb-showModal-true fb-buttonFill-info fb-inlineBlock fb-font16" >确定</button>\
+				            </div>\
+				        </div>\
+				    </div>';
+		}else{
+			var html = '<div style="display:none;" class="fb-showModal fb-position-fixed fb-z999 fb-showModal-black" >\
 				        <div class="fb-showModal-group fb-position-relative fb-transition startTop" >\
 				            <div class="fb-showModal-title fb-font18">'+fb.title+'</div>\
 				            <div class="fb-showModal-content fb-font14">'+fb.content+'</div>\
@@ -116,6 +196,8 @@
 				            </div>\
 				        </div>\
 				    </div>';
+		}
+		
 		$("body").append(html);
 		$(".fb-showModal").fadeIn(200).find(".fb-showModal-group").removeClass("startTop");
 
@@ -131,7 +213,8 @@
 		function succFunction(){
 			$(".fb-showModal").fadeOut(200);
 			if(succFn){
-				succFn();
+				var val = $(".fb-textBox").val();
+				succFn(val);
 			}
 		}
 		//取消
@@ -185,22 +268,101 @@
 		},fb.time);
 	};
 
+	fbUi.loading = function(options){
+		var that = this;
+		this.mask();
+		var defaults = {
+			color:'#fff',
+			time:null,
+            content:'',
+        };
+		var fb = $.extend(defaults,options || {});
+		var dom = '<div class="fb-loading fb-z1000 fb-position-fixed">\
+				<svg version="1.1" id="L1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 100 100" enable-background="new 0 0 100 100" xml:space="preserve">\
+				    <circle fill="none" stroke="'+fb.color+'" stroke-width="6" stroke-miterlimit="15" stroke-dasharray="14.2472,14.2472" cx="50" cy="50" r="47" transform="rotate(19.7745 50 50)">\
+				      <animateTransform attributeName="transform" attributeType="XML" type="rotate" dur="5s" from="0 50 50" to="360 50 50" repeatCount="indefinite"></animateTransform>\
+				  </circle>\
+				  <circle fill="none" stroke="'+fb.color+'" stroke-width="1" stroke-miterlimit="10" stroke-dasharray="10,10" cx="50" cy="50" r="39" transform="rotate(-19.7745 50 50)">\
+				      <animateTransform attributeName="transform" attributeType="XML" type="rotate" dur="5s" from="0 50 50" to="-360 50 50" repeatCount="indefinite"></animateTransform>\
+				  </circle>\
+				  <g fill="'+fb.color+'">\
+				  <rect x="30" y="35" width="5" height="30" transform="translate(0 1.50709)">\
+				    <animateTransform attributeName="transform" dur="1s" type="translate" values="0 5 ; 0 -5; 0 5" repeatCount="indefinite" begin="0.1"></animateTransform>\
+				  </rect>\
+				  <rect x="40" y="35" width="5" height="30" transform="translate(0 3.50709)">\
+				    <animateTransform attributeName="transform" dur="1s" type="translate" values="0 5 ; 0 -5; 0 5" repeatCount="indefinite" begin="0.2"></animateTransform>\
+				  </rect>\
+				  <rect x="50" y="35" width="5" height="30" transform="translate(0 4.49291)">\
+				    <animateTransform attributeName="transform" dur="1s" type="translate" values="0 5 ; 0 -5; 0 5" repeatCount="indefinite" begin="0.3"></animateTransform>\
+				  </rect>\
+				  <rect x="60" y="35" width="5" height="30" transform="translate(0 2.49291)">\
+				    <animateTransform attributeName="transform" dur="1s" type="translate" values="0 5 ; 0 -5; 0 5" repeatCount="indefinite" begin="0.4"></animateTransform>\
+				  </rect>\
+				  <rect x="70" y="35" width="5" height="30" transform="translate(0 0.492914)">\
+				    <animateTransform attributeName="transform" dur="1s" type="translate" values="0 5 ; 0 -5; 0 5" repeatCount="indefinite" begin="0.5"></animateTransform>\
+				  </rect>\
+				  </g>\
+				</svg>\
+				<p style="color:'+fb.color+'">'+fb.content+'</p>\
+			</div>';
+		$("body").append(dom);
+		if(fb.time != null ){
+			setTimeout(function(){
+				that.closeLoading();
+			},fb.time)
+		}
+	};
+	fbUi.closeLoading = function(){
+		$(".fb-loading").remove();
+		this.closeMask();
+	};
+	fbUi.mask = function(options,callback){
 
-
+		var defaults = {
+			
+        };
+		var fb = $.extend(defaults,options || {});
+		var dom = '<div class="fb-mask fb-z999"></div>';
+		$("body").append(dom);
+		if(callback){
+			$(".fb-mask").one("click",function(){
+				callback();
+			})
+		}
+	};
+	fbUi.closeMask = function(){
+		$(".fb-mask").remove();
+	}
 	//********* 实例方法  **************
 	
+
+
+
+
+
+
+
+
+
+
+
+
     //轮播图
     fbUi.prototype.banner_fade = function(options){
     	var $el = element[0];
 		var defaults = {
             speed : 1200,//unit: 滑动速度
             interval : 5000,//unit:轮播图间隔
-            autoPlay: true
+            autoPlay: true,
+            width:1920,
+            height:'100%',
+            transitionalStyle:"fb-banner-img-big"
         };
 		var fb = $.extend(defaults, options || {});
-		var imgLength = $el.find(".fb-spot-item").length    //图片个数
+		var imgLength = $el.find(".fb-banner-fade-item").length    //图片个数
 		,run = null //轮播图 ID
 		,bannerIndex = 0 ;
+		$el.find('.fb-banner-fade-item img').css({"width":fb.width,"height":fb.height,"marginLeft":"-"+fb.width/2+'px'})
 		$el.find(".fb-spot-item").on("click",function(){
 			var i = $(this).index();
 			if(bannerIndex == i){
@@ -209,7 +371,6 @@
 			bannerIndex = i;
 			go(i);
 		});
-		
 		$el.find(".fb-banner-prev").on("click",{dir:0},pageGo);
 		$el.find(".fb-banner-next").on("click",{dir:1},pageGo);
 		//上一页 下一页
@@ -232,15 +393,13 @@
 		};
 		function go(i){
 			$el.find(".fb-banner-spot .fb-spot-item").eq(i).addClass("fb-spot-item-active").siblings(".fb-spot-item").removeClass("fb-spot-item-active");
-			$el.find(".fb-banner-fade-item").eq(i).show().find("img").removeAttr("style").addClass("fb-banner-img-big").animate({"width":1920,"height":"500","marginLeft":"-960px","opacity":"1"},fb.speed,function(){$(this).removeClass("fb-banner-img-big")}).end().siblings(".fb-banner-fade-item").fadeOut("1000");
+			$el.find(".fb-banner-fade-item").eq(i).show().find("img").removeAttr("style").addClass(fb.transitionalStyle).animate({"width":fb.width,"height":fb.height,"marginLeft":"-"+fb.width/2,"opacity":"1"},fb.speed,function(){$(this).removeClass(fb.transitionalStyle)}).end().siblings(".fb-banner-fade-item").fadeOut("1000");
 		};
 		//定时
 		if(fb.autoPlay){
 			$el.hover(function(){clearInterval(run)},function(){bannerRun()});
 			bannerRun();
-		}
-		
-		function bannerRun(){
+		}function bannerRun(){
 			run = setInterval(function(){
 				i = ++bannerIndex > imgLength-1 ? 0 : bannerIndex;
 				bannerIndex = i;
@@ -248,22 +407,106 @@
 			},fb.interval);
 		};
 	};
+	fbUi.prototype.banner_slide = function(options){
+		var $el = element[0];
+		var defaults = {
+			speed : 500,//unit: 滑动速度
+			interval : 5000,//unit:轮播图间隔
+			autoPlay: true,
+			width:$('.fb-banner-slide').width(),
+		};
+		var fb = $.extend(defaults, options || {});
+		var imgLength = $el.find(".fb-banner-fade-item").length    //图片个数
+			,run = null //轮播图 ID
+			,bannerIndex = 0 ;
+		$el.find('.fb-banner-slide-item img').css({"width":fb.width})
+		$el.find(".fb-spot-item").on("click",function(){
+			var i = $(this).index();
+			if(bannerIndex == i){
+				return;
+			}
+			bannerIndex = i;
+			go(i);
+		});
+		$el.find(".fb-banner-prev").on("click",{dir:0},pageGo);
+		$el.find(".fb-banner-next").on("click",{dir:1},pageGo);
+		//上一页 下一页
+		function pageGo(event){
+			$el.find(".fb-banner-prev").off("click",pageGo);
+			$el.find(".fb-banner-next").off("click",pageGo);
+			var flag = event.data.dir;
+			if(!flag){
+				i = --bannerIndex < 0 ? imgLength-1 : bannerIndex;
+			}else{
+				i = ++bannerIndex > imgLength-1 ? 0 : bannerIndex;
+
+			}
+			bannerIndex = i;
+			go(i);
+			setTimeout(function(){
+				$el.find(".fb-banner-prev").on("click",{dir:0},pageGo);
+				$el.find(".fb-banner-next").on("click",{dir:1},pageGo);
+			},fb.speed)
+		};
+		function go(i){
+			$el.find(".fb-banner-spot .fb-spot-item").eq(i).addClass("fb-spot-item-active").siblings(".fb-spot-item").removeClass("fb-spot-item-active");
+			var w = $el.width();
+			$el.find(".fb-banner-slide-zone").animate({
+				left: -w*i
+			},fb.speed)
+		};
+		//定时
+		if(fb.autoPlay){
+			$el.hover(function(){clearInterval(run)},function(){bannerRun()});
+			bannerRun();
+		}function bannerRun(){
+			run = setInterval(function(){
+				i = ++bannerIndex > imgLength-1 ? 0 : bannerIndex;
+				bannerIndex = i;
+				go(i);
+			},fb.interval);
+		};
+		$(window).on("resize",function(){
+			var w = $el.width();
+			$el.find('.fb-banner-slide-item img').css({"width":w});
+			$el.find(".fb-banner-slide-zone").animate({
+				left: -w*bannerIndex
+			},fb.speed)
+		})
+	};
 	// 多图轮播
 	fbUi.prototype.figureCarousel = function(options){
 		var $el = element[0];
 		var defaults = {
             speed : 500,//unit: 滑动速度
-            interval : 5000,//unit:轮播图间隔
+            interval : 1000,//unit:轮播图间隔
             autoPlay: true,
-            showNum:5
+            showNum:5,
+            width:400, //图片宽度
+            height:150, //图片高度
+            boxWidth:400, //大盒子宽度  不传默认 = 图片
+            boxHeight:150, //大盒子高度
+			pagination:false //分页器
         };
 		var fb = $.extend(defaults, options || {});
+		if(!options.boxWidth)
+			fb.boxWidth = fb.width;
+		if(!options.boxHeight)
+			fb.boxHeight = fb.height;
 		var imgLength = Math.ceil($el.find(".fb-figureCarousel-item").length/fb.showNum)    //图片个数
-		,bannerIndex = 0,PW=$(".fb-figureCarousel-item").outerWidth(true)*fb.showNum;
+		,bannerIndex = 0
+		,boxWidth= $el.find(".fb-figureCarousel-boxOverflow").width() //父盒子的宽度
+		,item_margin = (boxWidth-fb.boxWidth*fb.showNum)/(fb.showNum*2)  //小盒子的间距
+		,figureCarouselTime=null //计时器;
+		//设置每个子盒子的宽度
+		$el.find(".fb-figureCarousel-item").css({"width":fb.boxWidth,"height":fb.boxHeight,"margin-left":item_margin,"margin-right":item_margin});
+		$el.find(".fb-figureCarousel-item img").css({"width":fb.width,"height":fb.height});
+		var PW=$el.find(".fb-figureCarousel-item").outerWidth(true)*fb.showNum;
 		$el.find(".fb-figureCarousel-left").on("click",{dir:0},pageGo);
 		$el.find(".fb-figureCarousel-right").on("click",{dir:1},pageGo);
 		//上一页 下一页
 		function pageGo(event){
+			var i;
 			$el.find(".fb-figureCarousel-left").off("click",pageGo);
 			$el.find(".fb-figureCarousel-right").off("click",pageGo);
 			var flag = event.data.dir;
@@ -280,20 +523,65 @@
 			},fb.speed)
 		};
 		function go(i){
-			 $el.find(".fb-figureCarousel-box").animate({
+			$el.find(".fb-figureCarousel-spot .fb-spot-item").eq(i).addClass("fb-spot-item-active").siblings(".fb-spot-item").removeClass("fb-spot-item-active");
+			$el.find(".fb-figureCarousel-box").animate({
 			 	"left":-PW*i
 			 },fb.speed);
 		};
+		if(fb.autoPlay){
+			//自动滚动
+			autoPlayFun();
+			function autoPlayFun(){
+				figureCarouselTime = setInterval(function(){
+					var i  = ++bannerIndex > imgLength-1 ? 0 : bannerIndex;
+					bannerIndex = i;
+					go(i);
+				},fb.interval);
+			}
+			
+			$el.hover(function(){
+				clearInterval(figureCarouselTime);
+			},function(){
+				autoPlayFun();
+			})
+		}
+		if(fb.pagination){
+			//imgLength
+			var dom ='';
+			for(var n = 0;n<imgLength;n++){
+				if( n == 0){
+					dom += '<div class="fb-spot-item fb-inlineBlock fb-spot-item-active"></div>';
 
+				}else{
+					dom += '<div class="fb-spot-item fb-inlineBlock"></div>';
+
+				}
+			}
+			$el.find(".fb-figureCarousel-spot").html(dom);
+			$el.find(".fb-spot-item").on("click",function(){
+				var i = $(this).index(".fb-figureCarousel-spot .fb-spot-item");
+				go(i);
+			})
+		}
 	};
 	// 无缝滚动  $fb(".one").seamlessScrolling();
 	fbUi.prototype.seamlessScrolling = function(options){
 		var $el = element[0];
 		var defaults = {
             speed : 20,//unit: 滑动速度
+            width : 200,
+            height : 200,
+            boxWidth: 200,//大盒子宽度  不传默认 = 图片
+            boxHeight:200,
+            margin : 20
         };
 		var fb = $.extend(defaults, options || {});
-		// parameter =
+        if(!options.boxWidth)
+			fb.boxWidth = fb.width;
+		if(!options.boxHeight)
+			fb.boxHeight = fb.height;
+		$el.find(".fb-seamlessScrolling-item").css({"width":fb.boxWidth,"height":fb.boxHeight,"margin-left":fb.margin,"margin-right":fb.margin});
+		$el.find(".fb-seamlessScrolling-item img").css({"width":fb.width,"height":fb.height});
 		var imgLength = $el.find(".fb-seamlessScrolling-item").length,
 		itemWidth = $el.find(".fb-seamlessScrolling-item").outerWidth(true),
 		se_t = null,se_long=0;
@@ -304,7 +592,6 @@
                		se_long += 1;
                 	$el.find(".fb-seamlessScrolling-overflow").css("left",-se_long);
                 if(se_long >= imgLength*220){
-                	console.log(se_long)
                     $el.find(".fb-seamlessScrolling-overflow").css("left",0);
                     se_long = 0;
                 }
@@ -452,16 +739,17 @@
 
 			}
 		})
-		console.log(obig.position())
 	};
 	//时间控件
-	fbUi.prototype.showDate = function(options){
+	fbUi.prototype.showDate = function(options,succfun){
 		var $el = element[0];
 		var defaults = {
-           dateControl:true,
-           timeControl:false,
-           dayControl:true,
-           secondsControl:true,
+           dateControl:true, //年
+           monthControl:false, //月
+           dayControl:false,//日
+           timeControl:false, //时
+           minuteControl:false,//分
+           secondsControl:false,//秒
         };
 		var fb = $.extend(defaults, options || {});
 		var date = new Date(),
@@ -476,19 +764,26 @@
 		bindevent = {
 			init: function(){
 				//初始化控件
-				var initHtml = '<div class="fb-showdate">\
-									<div class="fb-showdate-tab"></div>\
+				var input_top = $el.offset().top+$el.outerHeight();
+				var input_left = $el.offset().left;
+				var initHtml = '<div class="fb-showdate fb-position-absolute" style="top:'+input_top+'px;left:'+input_left+'px">\
+									<div class="fb-showdate-tab"><div class="fb-showdate-close fb-position-absolute">关闭</div></div>\
 									<div class="fb-showdate-model"></div>\
 								</div>';
 				$(".fb-showdate").remove();//移除之前的控件
 				$("body").append(initHtml);
+
 				if(fb.dateControl){
 					//存在年月日控件
 					$(".fb-showdate .fb-showdate-tab").append('<div class="fb-showdate-tab-item fb-showdate-tab-year fb-float-left fb-font14 fb-color-222 ">年份<span class="fb-font12"></span></div>');
 					$(".fb-showdate .fb-showdate-model").append('<div class="fb-showdate-model-item fb-showdate-model-year fb-clearfix" style="display:block"></div>');
 	 				this.getYear()
-					$(".fb-showdate .fb-showdate-tab").append('<div class="fb-showdate-tab-item fb-showdate-tab-month fb-float-left fb-font14 fb-color-222 ">月份<span class="fb-font12"></span></div>')
-					$(".fb-showdate .fb-showdate-model").append('<div class="fb-showdate-model-item fb-showdate-model-month fb-clearfix"></div>');
+					
+					if(fb.monthControl){
+						//存在日期控件控件
+						$(".fb-showdate .fb-showdate-tab").append('<div class="fb-showdate-tab-item fb-showdate-tab-month fb-float-left fb-font14 fb-color-222 ">月份<span class="fb-font12"></span></div>')
+						$(".fb-showdate .fb-showdate-model").append('<div class="fb-showdate-model-item fb-showdate-model-month fb-clearfix"></div>');
+             		}
 					if(fb.dayControl){
 						//存在日期控件控件
 						$(".fb-showdate .fb-showdate-tab").append('<div class="fb-showdate-tab-item fb-showdate-tab-day fb-float-left fb-font14 fb-color-222 ">日期<span class="fb-font12"></span></div>')
@@ -506,6 +801,7 @@
 				count = $(".fb-showdate .fb-showdate-tab .fb-showdate-tab-item").length;
 			},
 			getYear : function(year,month){
+				yearDom = ''; //清空前面的数据
 				for(var i = 1990 ; i <= nowyear ; i++){
 					yearDom += '<span class="fb-float-left fb-font14 " value="'+i+'">'+i+'</span>';
 				}
@@ -513,14 +809,17 @@
 
 			},
 			getMonth : function(){
+				monthDom = ''; //清空前面的数据
 				for(var i = 1 ; i <= 12 ; i++){
 					var value = i < 10 ? "0"+i : i;
-					console.log(value)
+					
 					monthDom += '<span class="fb-float-left fb-font14 " value="'+value+'">'+value+'</span>';
 				}
 				$(".fb-showdate-model-month").html(monthDom).fadeIn(200);
+
 			},
 			getDay : function(year,month){
+				dayDom = ''; //清空前面的数据
 				var dayNum = new Date(year,month,0).getDate();
 				for(var i = 1 ; i <= dayNum ; i++){
 					var value = i < 10 ? "0"+i : i;
@@ -531,27 +830,32 @@
 			getValue : function(){
 				$(".fb-showdate").remove();
 				var val = '';
-				if(fb.timeControl){
-					//有时间控件
-					if(fb.dateControl){
-						//有日期控件
-						if(fb.secondsControl){
-							//有秒控件
-						}else{
-
-						}
-					}
-				}else if(fb.dateControl){
-					//有日期控件
-					if(fb.dayControl){
-						//有日数控件
-						val = value.year + "-" + value.month + "-" + value.day ;
-					}else{
-
-					}
+				if(fb.dateControl){
+					val += '-'+value.year;
 				}
-
-				$el.val(val)
+				if(fb.monthControl){
+					val += '-'+value.month;
+				}
+				if(fb.dayControl){
+					val += '-'+value.day;
+				}
+				if(fb.timeControl){
+					val += ' '+value.timeVal;
+				}
+				if(fb.minuteControl){
+					val += ':'+value.minuteVal;
+				}
+				if(fb.secondsControl){
+					val += ':'+value.secondsVal;
+				}
+				val = val.substring(1)
+				$el.val(val);
+				if(succfun){
+					succfun(val);
+				}
+			},
+			closeDate:function(){
+				$(".fb-showdate").remove();
 			}
 		};
 		// 选择年份
@@ -560,6 +864,9 @@
 			value.year = $(this).attr("value");
 			$(".fb-showdate-tab-year span").text(value.year);
 			bindevent.getMonth();
+			if( !fb.monthControl && !fb.dayControl && !fb.timeControl && !fb.minuteControl && !fb.secondsControl ){
+				bindevent.getValue();
+			}
 		})
 		// 选择月份
 		$("body").on("click",".fb-showdate-model-month span",function(){
@@ -567,6 +874,9 @@
 			value.month = $(this).attr("value");
 			$(".fb-showdate-tab-month span").text(value.month);
 			bindevent.getDay(value.year,value.month);
+			if(!fb.dayControl && !fb.timeControl && !fb.minuteControl && !fb.secondsControl ){
+				bindevent.getValue();
+			}
 		})
 		// 选择日期
 		$("body").on("click",".fb-showdate-model-day span",function(){
@@ -581,11 +891,198 @@
 			}
 			
 		})
-		bindevent.init();
+		//关闭
+		$("body").on("click",".fb-showdate-close",function(){
+			bindevent.closeDate();
+		})
+		$el.on("focus",function(){
+			bindevent.init();
+			$(this).blur();
+		})
+
+		
 		
 	};
-    window.$fb = window.fbUi = fbUi;
+	//模拟下拉
+	fbUi.prototype.select = function(){
+		var $el = element[0];
+		var defaults = {
+            con:[],
+        };
+		var fb = $.extend(defaults, options || {});
+		$el.focus(function(){
+			$('.artwork').addClass('show_div');
+			$('#type').blur();
+		});
+	};
+	// 表单验证 
+	fbUi.prototype.formValidator = function(options,func){
+		var $el = element[0];
+		var fb_testHook = {
+		    // 验证合法邮箱
+		    is_email: function(field){return regexs.email.test( field );},
+		    // 验证合法 ip 地址
+		    is_ip: function(field){return regexs.ip.test( field);},
+		    // 验证传真
+		    is_fax:function(field){return regexs.fax.test( field );},
+		    // 验证座机
+		    is_tel:function(field){return regexs.fax.test( field );},
+		    // 验证手机
+		    is_phone:function(field){return regexs.phone.test( field );},
+		    // 验证URL
+		    is_url:function(field){return regexs.url.test( field );},
+		    // 是否为必填
+		    required: function(field) {
+		        var value = field;
+		        if ((field.type === 'checkbox') || (field.type === 'radio')) {
+		            return (field.checked === true);
+		        }
+		        //不为空 ：true  为空 ：false
+		        return (value.val() !== null && value.val() !== '');
+		    },
+		    // 最大长度
+		    max_length: function(field, length){
+		        if (!regexs.numericRegex.test(length)) return false;
+		        //符合长度 ：true
+		        return ( field.length <= parseInt(length, 10));
+		    },
+		    // 最小长度
+		    min_length: function(field, length){
+		        if (!regexs.numericRegex.test(length)) return false;
+		        //符合长度 ：true
+		        return ( field.length >= parseInt(length, 10));
+		    },
+		    // 验证是否为数字
+		    is_number: function(field){return regexs.numericRegex.test(field);},
+		    //验证是否相等 传name
+		    is_equal:function(field01,field02){
+		    	return field01 == field02;
+		    }
+		    
+		}
+		var defaults = {
+            
+        };
+		var fb = $.extend(defaults, options || {});
+		$el.on("submit",function(){
+			$.each(fb,function(a,b){
+				form_flag = false;
+				if(b.rules){
+					//有规则
+					switch(b.rules) {
+						case 'required': 
+							var val = $el.find("[name=\""+b.name+"\"]");
+							if(!fb_testHook.required(val)){
+								$fb.fbNews({"type":"danger","content":b.display});
+								form_flag = true;
+								return false;
+							}
+							break;
+						case 'is_email': 
+							var val = $el.find("[name=\""+b.name+"\"]").val();
+							if(!fb_testHook.is_email(val)){
+								$fb.fbNews({"type":"danger","content":b.display});
+								form_flag = true;
+								return false;
+							}
+							break;
+						case 'is_ip': 
+							var val = $el.find("[name=\""+b.name+"\"]").val();
+							if(fb_testHook.is_ip(val)){
+								$fb.fbNews({"type":"danger","content":b.display});
+								form_flag = true;
+								return false;
+							}
+							break;
+						case 'is_tel': 
+							var val = $el.find("[name=\""+b.name+"\"]").val();
+							if(fb_testHook.is_tel(val)){
+								$fb.fbNews({"type":"danger","content":b.display});
+								form_flag = true;
+								return false;
+							}
+							break;
+						case 'is_phone': 
+							var val = $el.find("[name=\""+b.name+"\"]").val();
+							if(fb_testHook.is_phone(val)){
+								$fb.fbNews({"type":"danger","content":b.display});
+								form_flag = true;
+								return false;
+							}
+							break;
+						case 'is_url': 
+							var val = $el.find("[name=\""+b.name+"\"]").val();
+							if(fb_testHook.is_url(val)){
+								$fb.fbNews({"type":"danger","content":b.display});
+								form_flag = true;
+								return false;
+							}
+							break;
+						case 'is_fax': 
+							var val = $el.find("[name=\""+b.name+"\"]").val();
+							if(fb_testHook.is_fax(val)){
+								$fb.fbNews({"type":"danger","content":b.display});
+								form_flag = true;
+								return false;
+							}
+							break;
+						case 'is_number': 
+							var val = $el.find("[name=\""+b.name+"\"]").val();
+							if(!fb_testHook.is_number(val)){
+								$fb.fbNews({"type":"danger","content":b.display});
+								form_flag = true;
+								return false;
+							}
+							break;
+						case 'is_equal': 
+							var val = $el.find("[name=\""+b.name+"\"]").val();
+							var equalVal = $el.find("[name=\""+b.equalName+"\"]").val();
+							if(!fb_testHook.is_equal(equalVal,val)){
+								$fb.fbNews({"type":"danger","content":b.equaldisplay});
+								form_flag = true;
+								return false;
+							}
+							break;
+						default:
+							// $fb.fbNews({"type":"danger","content":""});
+							break;
+					}
 
+				}
 
+				//有限制字数
+				if(b.maxLength){
+					var val = $el.find("[name=\""+b.name+"\"]").val();
+					if(!fb_testHook.max_length(val,b.maxLength)){
+						if(b.maxdisplay)
+							$fb.fbNews({"type":"danger","content":b.maxdisplay});
+							form_flag = true;
+							return false;
+					}
+				}
+				if(b.minLength){
+					var val = $el.find("[name=\""+b.name+"\"]").val();
+					if(!fb_testHook.min_length(val,b.minLength)){
+						if(b.mindisplay)
+							$fb.fbNews({"type":"danger","content":b.mindisplay});
+							form_flag = true;
+							return false;
+					}
+				}
+			});
+			if(form_flag){
+				return false;
+			}
+			if(func){
+				func($el);
+			}else{
+			
+				$el.onsubimt()
+			}
+			return false; //阻止form提交
 
+		})
+		
+	};
+   window.$fb = window.fbUi = fbUi;
 })(window,$);
